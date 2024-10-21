@@ -1,6 +1,9 @@
 Require Import Utf8.
 From TLC Require Import LibLN.
 
+(* We use the locally nameless variable binding representation
+   based on https://www.chargueraud.org/softs/ln/ *)
+
 Inductive trm : Set :=
   | trm_bvar : nat → trm
   | trm_fvar : var → trm
@@ -56,6 +59,8 @@ Inductive jump : trm → Prop :=
       term t →
       jump (trm_app trm_tp t).
 
+(* Substitution of a term in a jump. Used in reduction rules:
+   red_C_L (J[k (P N) / k P]) and red_C_R (J[k (V P) / k P]) *)
 Fixpoint jump_subst_rec (k : nat) (f : trm → trm) (t : trm) : trm :=
   match t with
   | trm_bvar i    => trm_bvar i
