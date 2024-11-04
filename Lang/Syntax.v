@@ -17,8 +17,8 @@ Notation incV := (on₁ inc).
 Notation incK := (on₂ inc).
 
 (* continuation atoms *)
-Inductive katom (A : Set) : Set :=
-  | k_var   : A → katom A
+Inductive katom (A : VSig) : Set :=
+  | k_var   : kv A → katom A
   | k_tp    : katom A.
 
 (* We use bidirectionality hints (&) to solve
@@ -34,7 +34,7 @@ with value (A : VSig) : Set :=
   | v_var   : tv A → value A
   | v_lam   : term (incV A) → value A
 with jump (A : VSig) : Set :=
-  | j_jmp   : katom (kv A) → term A → jump A.
+  | j_jmp   : katom A → term A → jump A.
 
 Coercion t_value : value >-> term.
 
@@ -66,16 +66,16 @@ Fixpoint eplug {A : VSig} (E : ectx A) (t : term A) : term A :=
 (* We use structural substitution with jumps.
    J[q E/k] means replace every occurence of k N with q E[N] in J. *)
 Inductive ssub (A : VSig) : Type :=
-  | s_sub : katom (kv A) → ectx A → ssub A.
+  | s_sub : katom A → ectx A → ssub A.
 
 Arguments s_sub & {A}.
 
 (* ========================================================================= *)
 (* Mapping, i.e. variable renaming *)
 
-Definition kmap {A B : Set} (f : A [→] B) (q : katom A) : katom B :=
+Definition kmap {A B : VSig} (φ : @prod_arr _ _ Arr Arr A B) (q : katom A) : katom B :=
   match q with
-  | k_var k => k_var (f k)
+  | k_var k => k_var (arr₂ φ k)
   | k_tp    => k_tp
   end.
 
@@ -94,7 +94,7 @@ with vmap {A B : VSig} (φ : prod_arr A B) (v : value A) : value B :=
   end
 with jmap {A B : VSig} (φ : prod_arr A B) (j : jump A) : jump B :=
   match j with
-  | j_jmp q t => j_jmp (kmap (arr₂ φ) q) (tmap φ t)
+  | j_jmp q t => j_jmp (kmap φ q) (tmap φ t)
   end.
 
 Instance FMap_term  : FunctorCore term  := @tmap.
@@ -112,7 +112,7 @@ Instance FMap_ectx : FunctorCore ectx := @emap.
 
 Definition smap {A B : VSig} (φ : prod_arr A B) (s : ssub A) : ssub B :=
   match s with
-  | s_sub q E => s_sub (kmap (arr₂ φ) q) (emap φ E)
+  | s_sub q E => s_sub (kmap φ q) (emap φ E)
   end.
 
 Instance FMap_ssub : FunctorCore ssub := @smap.
