@@ -1,4 +1,16 @@
 -R . Top
-Syntax.v
-Typing.v
-Semantics.v
+
+./Binding/Properties.v
+./Binding/Lib.v
+./Binding/Set.v
+./Binding/Auto.v
+./Binding/Core.v
+./Binding/Inc.v
+./Binding/Intrinsic.v
+./Binding/TermSimpl.v
+./Binding/Product.v
+./Binding/Env.v
+
+./Lang/Syntax.v
+./Lang/Typing.v
+./Lang/Semantics.v
