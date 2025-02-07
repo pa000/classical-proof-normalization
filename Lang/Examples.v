@@ -116,30 +116,22 @@ Qed.
 Example peirce_red : ¬ ∃ M, peirce →ₜ M.
 Proof.
   intro. destruct H as [M Htred_peirce].
-  inversion Htred_peirce as [| | | | ? V Hvred_peirce | | |]; subst.
+  inversion Htred_peirce as [| | | ? V Hvred_peirce | | |]; subst.
   inversion Hvred_peirce as [ ? M Htred_ctrl ]; subst.
-  inversion Htred_ctrl as [| | | ? HshiftM | | | | a1 J Hjred_jmp a4 ]; subst.
-  + (* tred_C_elim *)
-    destruct M; inversion HshiftM as [[ HshiftM1 HshiftM2 ]]; clear HshiftM1.
-    destruct M2 as [ V | |]; inversion HshiftM2 as [ HshiftV ].
-    destruct V as [| M3 ]; inversion HshiftV as [ HshiftM3 ].
-    destruct M3 as [| | J ]; inversion HshiftM3 as [ HshiftJ ].
-    destruct J as [ q M4 ]; inversion HshiftJ as [ [ Hshiftq HshiftM4 ] ]; clear HshiftM4.
-    destruct q; inversion Hshiftq as [ Hshiftk ].
-    destruct k; inversion Hshiftk.
+  inversion Htred_ctrl as [| | ? HshiftM | | | | a1 J Hjred_jmp a4 ]; subst.
   + (* tred_ctrl *)
     destruct J as [ q M ]; inversion Hjred_jmp as [| ? ? ? Htred_tapp ]; subst.
-    destruct M; inversion Htred_tapp as [| | | | | M M1' M2' Htred_var | M M1' M2' Htred_lam |];
+    destruct M; inversion Htred_tapp as [| | | | M M1' M2' Htred_var | M M1' M2' Htred_lam |];
     [ subst M1' M M2'; clear H2 | subst M1' M M2' M1 ].
     - (* tred_app_L *)
-      destruct M1 as [ V | |]; inversion Htred_var as [| | | | ? ? Hvred_var | | | ]; subst.
+      destruct M1 as [ V | |]; inversion Htred_var as [| | | ? ? Hvred_var | | | ]; subst.
       destruct V; inversion Hvred_var.
     - (* tred_app_R *)
-      destruct M2 as [ V | |]; inversion Htred_lam as [| | | | ? ? Hvred_lam | | | ]; subst.
+      destruct M2 as [ V | |]; inversion Htred_lam as [| | | ? ? Hvred_lam | | | ]; subst.
       destruct V as [ | M ]; inversion Hvred_lam as [ ? ? Htred_ctrl2 ]; subst.
-      destruct M as [| | J ]; inversion Htred_ctrl2 as [ | | | | | | | ? ? Hjred_jmp2 ]; subst.
+      destruct M as [| | J ]; inversion Htred_ctrl2 as [| | | | | | ? ? Hjred_jmp2 ]; subst.
       destruct J as [ ? M ]; inversion Hjred_jmp2 as [| ? ? ? Htred_var ]; subst.
-      destruct M as [ V | |]; inversion Htred_var as [| | | | ? ? Hvred_var | | |]; subst.
+      destruct M as [ V | |]; inversion Htred_var as [| | | ? ? Hvred_var | | |]; subst.
       destruct V; inversion Hvred_var.
 Qed.
 
@@ -172,7 +164,7 @@ Example id_one : term ⟨const, ∅⟩ :=
     1.
 
 Example id_one_red :
-  id_one →+ₜ 1.
+  id_one →+ₜ (t_ctrl (j_jmp (k_var VZ) 1)).
 Proof.
   unfold id_one.
   (* (C(λk. tp ((λq.q I) (λf. throw k f)))) 1 *)
@@ -204,13 +196,8 @@ Proof.
   term_simpl.
   (* C(λk. k (I 1)) *)
   (*          ^^^ (beta) *)
-  eapply t1n_trans.
-  { apply tred_ctrl.
-    apply jred_jmp.
-    apply tred_beta. }
-  term_simpl.
-  (* C(λk. k 1) *)
-  (* ^^^^^^^ (C_elim) *)
   apply t1n_step.
-  apply tred_C_elim with (M := 1 : value ⟨_, _⟩).
+  apply tred_ctrl.
+  apply jred_jmp.
+  constructor.
 Qed.

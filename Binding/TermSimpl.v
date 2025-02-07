@@ -202,5 +202,12 @@ Ltac term_simpl_in H :=
     try autorewrite with term_simpl in H
   ).
 
+Ltac term_simpl_all :=
+  term_simpl_goal;
+  match goal with
+  | [ H: _ |- _ ] => progress term_simpl_in H
+  end.
+
 Tactic Notation "term_simpl" := term_simpl_goal.
 Tactic Notation "term_simpl" "in" hyp(H) := term_simpl_in H.
+Tactic Notation "term_simpl" "in" "*" := term_simpl_all.

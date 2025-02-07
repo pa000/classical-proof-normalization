@@ -16,3 +16,4 @@
 ./Lang/Semantics.v
 ./Lang/Preservation.v
 ./Lang/Examples.v
+./Lang/Confluence.v

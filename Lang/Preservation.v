@@ -40,12 +40,6 @@ Proof.
     - econstructor.
       * apply ttyping_kv_weaken with (M := V). apply HV.
       * constructor.
-  + inversion HT as [| | | ? ? Hjmp ]; subst.
-    inversion Hjmp as [| ? B ? HVZ HM ]; subst.
-    simpl in HVZ. inversion HVZ as [| ? ? HAB ]; subst. simpl in HAB.
-    inversion HAB; subst.
-    apply ttyping_kv_weaken in HM.
-    apply HM.
   + eapply vpreservation.
     - apply HT.
     - apply H.

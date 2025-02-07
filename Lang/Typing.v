@@ -44,12 +44,12 @@ Notation "Γ '↦ₖ' K" := (extend_k Γ K) (at level 67).
 Reserved Notation "'K[' Γ '⊢' q '∷' A '→⊥⊥' ']'".
 Inductive ktyping {S : VSig} (Γ : env S) : katom S → ttype → Prop :=
   | K_Tp :
-    (* ------------------- *)
+    (* ----------------------- *)
     K[ Γ ⊢ k_tp ∷ tp_bottom →⊥⊥ ]
 
   | K_Var : ∀ k A,
     env_k Γ k = tp_cont A →
-    (* -------------- *)
+    (* ------------------ *)
     K[ Γ ⊢ k_var k ∷ A →⊥⊥ ]
 
 where "K[ Γ ⊢ q ∷ A →⊥⊥ ]" := (@ktyping _ Γ q A).
