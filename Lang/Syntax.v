@@ -16,6 +16,9 @@ Definition kv (A : VSig) := π₂ A.
 Notation incV := (on₁ inc).
 Notation incK := (on₂ inc).
 
+Notation "t ↑ᵥ" := (lift (G := incV) t) (at level 15).
+Notation "t ↑ₖ" := (lift (G := incK) t) (at level 15).
+
 (* continuation atoms *)
 Inductive katom (A : VSig) : Set :=
   | k_var   : kv A → katom A

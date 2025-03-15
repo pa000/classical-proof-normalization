@@ -898,8 +898,6 @@ Definition spar {S T : VSig} (φ φ' : S {→} T) :=
   ∧ (∀ k, sub_k φ k ⇉ₛₛ sub_k φ' k).
 Notation "φ ⇉ₛ φ'" := (spar φ φ') (at level 67).
 
-Notation "t ↑ᵥ" := (lift (G := incV) t) (at level 15).
-
 Lemma spar_vlift {S T : VSig} (φ φ' : S {→} T) :
   φ ⇉ₛ φ' →
   φ ↑ᵥ ⇉ₛ φ' ↑ᵥ.
