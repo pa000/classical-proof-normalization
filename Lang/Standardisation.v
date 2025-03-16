@@ -472,18 +472,18 @@ Proof.
 (* tstd_map *)
 {
   intros Hstd.
-  induction Hstd.
+  inversion Hstd as [? P ? HM₁whP HPintM₂]; subst.
   + econstructor.
-    - apply twh_map. apply H.
-    - apply tint_map. apply H0.
+    - apply twh_map. apply HM₁whP.
+    - apply tint_map. apply HPintM₂.
 }
 (* jstd_map *)
 {
   intros Hstd.
-  induction Hstd.
+  inversion Hstd as [? P ? HJ₁whP HPintJ₂].
   + econstructor.
-    - apply jwh_map. apply H.
-    - apply jint_map. apply H0.
+    - apply jwh_map. apply HJ₁whP.
+    - apply jint_map. apply HPintJ₂.
 }
 Qed.
 
@@ -712,18 +712,18 @@ Proof.
   intros E E' M M' Hestd Hstd.
   induction Hestd.
   + term_simpl. apply Hstd.
-  + term_simpl. inversion IHHestd as [? P ? HMwhP HPintM']; subst.
+  + term_simpl. inversion IHHestd as [? P ? HM HP]; subst.
     econstructor.
-    - apply twh_app_L_cong. apply HMwhP.
+    - apply twh_app_L_cong. apply HM.
     - constructor.
-      * apply HPintM'.
+      * apply HP.
       * apply H.
-  + term_simpl. inversion IHHestd as [? P ? HMwhP HPintM']; subst.
+  + term_simpl. inversion IHHestd as [? P ? HM HP]; subst.
     econstructor.
-    - apply twh_app_R_cong. apply HMwhP.
+    - apply twh_app_R_cong. apply HM.
     - constructor.
       * constructor. apply H.
-      * apply tint_std. apply HPintM'.
+      * apply tint_std. apply HP.
 Qed.
 
 Lemma tint_bind {S T : VSig} : ∀ (φ φ' : S {→} T) M M',
@@ -779,7 +779,7 @@ Proof.
       specialize Hsstdₖ with k.
       unfold ssstd in Hsstdₖ.
 
-      destruct (sub_k φ k) as [q E].
+      destruct (sub_k φ  k) as [q  E ].
       destruct (sub_k φ' k) as [q' E'].
 
       destruct Hsstdₖ as [Hq HE].
@@ -846,12 +846,12 @@ Lemma twh_std_std {S : VSig} (M₁ M M₂ : term S) :
   M₁ ↠ₛₜ M₂.
 Proof.
   intros Hwh Hstd.
-  inversion Hstd as [? P ? HMwhP HPintM₂]; subst.
+  inversion Hstd as [? P ? HM HP]; subst.
   econstructor.
   + econstructor 3.
     - apply Hwh.
-    - apply HMwhP.
-  + apply HPintM₂.
+    - apply HM.
+  + apply HP.
 Qed.
 
 Lemma jwh_std_std {S : VSig} (J₁ J J₂ : jump S) :
@@ -860,12 +860,12 @@ Lemma jwh_std_std {S : VSig} (J₁ J J₂ : jump S) :
   J₁ ↠ₛⱼ J₂.
 Proof.
   intros Hwh Hstd.
-  inversion Hstd as [? P ? HJwhP HPintJ₂]; subst.
+  inversion Hstd as [? P ? HJ HP]; subst.
   econstructor.
   + econstructor 3.
     - apply Hwh.
-    - apply HJwhP.
-  + apply HPintJ₂.
+    - apply HJ.
+  + apply HP.
 Qed.
 
 (* -------------------------------------------------------------------------- *)
@@ -884,97 +884,102 @@ Proof.
 {
   intros Htint Hwh.
   induction Hwh.
-  + inversion Htint; subst.
-    inversion H2; subst.
-    inversion H1; subst.
-    inversion H3; subst.
-    inversion H0; subst.
+  + inversion Htint as [| N₁ ? N₂ ? HN₁ HN₂ |]; subst.
+
+    inversion HN₁ as [ V₁ ? HV₁ | |]; clear HN₁; subst.
+    inversion HV₁ as [| N₁ ? HN₁ ]; clear HV₁; subst.
+
+    inversion HN₂ as [ ? P₂ ? HwhN₂ HP₂]; clear HN₂; subst.
+    inversion HP₂ as [ V₂ ? HV₂ | |]; clear HP₂; subst.
 
     eapply twh_std_std.
     - econstructor 3.
-      * apply twh_app_R_cong. apply H.
+      * apply twh_app_R_cong. apply HwhN₂.
       * constructor. constructor.
     - apply tstd_bind.
       * apply mk_subst_sstd.
-        apply H7.
-      * apply H4.
-  + inversion Htint; subst.
-    inversion H2; subst.
+        apply HV₂.
+      * apply HN₁.
+  + inversion Htint as [| N₁ ? N₂ ? HN₁ HN₂ |]; subst.
+    inversion HN₁ as [| | J₁ ? HJ₁ ]; clear HN₁; subst.
+
     econstructor.
     - constructor. constructor.
     - constructor.
       apply jstd_bind.
       * apply struct_sub_sstd.
         constructor; [ apply estd_refl |].
-        apply tstd_map. apply H3.
-      * apply H1.
-  + inversion Htint; subst.
-    inversion H2; subst.
-    inversion H3; subst.
-    inversion H0; subst.
+        apply tstd_map. apply HN₂.
+      * apply HJ₁.
+  + inversion Htint as [| N₁ ? N₂ ? HN₁ HN₂ |]; subst.
+    inversion HN₁ as [ V₁ ? HV₁ | |]; clear HN₁; subst.
+
+    inversion HN₂ as [ ? P₂ ? HwhN₂ HP₂ ]; clear HN₂; subst.
+    inversion HP₂ as [| | J₂ ? HJ₂ ]; clear HP₂; subst.
 
     econstructor.
     - econstructor 3.
       * apply twh_app_R_cong.
-        apply H.
+        apply HwhN₂.
       * constructor. constructor.
     - constructor.
       apply jstd_bind.
       * apply struct_sub_sstd.
         constructor; [| apply estd_refl ].
         apply vint_map.
-        apply H1.
-      * apply H6.
-  + inversion Htint; subst.
-    apply IHHwh in H2.
+        apply HV₁.
+      * apply HJ₂.
+  + inversion Htint as [| M₀ ? N₀ ? HM₀ HN₀ |]; subst.
+    apply IHHwh in HM₀.
     apply tstd_app.
-    - apply H2.
-    - apply H3.
-  + inversion Htint; subst.
-    inversion H3; subst.
-    apply IHHwh in H0.
+    - apply HM₀.
+    - apply HN₀.
+  + inversion Htint as [| V₀ ? N₀ ? HV₀ HN₀ |]; subst.
+    inversion HN₀ as [ ? P ? HwhN₀ HP ]; subst.
+    apply IHHwh in HP.
     apply tint_std.
     constructor.
-    - apply H2.
+    - apply HV₀.
     - eapply twh_std_std.
-      * apply H.
-      * apply H0.
-  + inversion Htint; subst.
+      * apply HwhN₀.
+      * apply HP.
+  + inversion Htint as [| | J₀ ? HJ₀ ]; subst.
     apply tstd_ctrl_cong.
 
-    inversion H2; subst.
+    inversion HJ₀ as [ ? P ? HwhJ₀ HintP ]; subst.
 
-    pose proof (jint_wh_std' _ _ _ _ H1 H) as H3.
+    pose proof (jint_wh_std' _ _ _ _ HintP H) as HstdP.
     eapply jwh_std_std.
-    - apply H0.
-    - apply H3.
+    - apply HwhJ₀.
+    - apply HstdP.
 }
 (* jint_wh_std' *)
 {
   intros Hjint Hwh.
   induction Hwh.
-  + inversion Hjint; subst.
-    inversion H1; subst.
-    inversion H0; subst.
+  + inversion Hjint as [ q₀ M₀ ? HM₀ ]; subst.
+    inversion HM₀ as [ ? P₀ ? HwhM HP₀ ]; clear HM₀; subst.
+    inversion HP₀ as [| | J₀ ? HJ₀ ]; clear HP₀; subst.
 
     eapply jwh_std_std.
     - econstructor 3.
       * apply jwh_jmp_cong.
-        apply H.
+        apply HwhM.
       * constructor. constructor.
     - apply jstd_bind.
       * apply sstd_refl.
-      * apply H4.
-  + inversion Hjint; subst.
+      * apply HJ₀.
+  + inversion Hjint as [ q₀ M₀ ? HM₀ ]; subst.
     apply jstd_jmp_cong.
-    destruct H2.
-    pose proof (tint_wh_std' _ _ _ _ H1 H) as H3.
-    destruct H3.
+
+    inversion HM₀ as [ ? P₀ ? HwhM₀ HP₀ ]; clear HM₀; subst.
+    pose proof (tint_wh_std' _ _ _ _ HP₀ H) as HstdM₀.
+    inversion HstdM₀ as [ ? P₀' ? HwhP₀ HP₀' ]; clear HstdM₀; subst.
     econstructor.
     - econstructor 3.
-      * apply H0.
-      * apply H2.
-    - apply H3.
+      * apply HwhM₀.
+      * apply HwhP₀.
+    - apply HP₀'.
 }
 Qed.
 
@@ -990,12 +995,12 @@ Proof.
     - apply Htint.
     - apply H.
   + apply tint_std. apply Htint.
-  + apply IHHwh1 in Htint.
-    destruct Htint.
-    apply IHHwh2 in H0.
+  + apply IHHwh1 in Htint as Hstd.
+    inversion Hstd as [ ? P ? HM₁ HP ]; subst.
+    apply IHHwh2 in HP.
     eapply twh_std_std.
-    - apply H.
-    - apply H0.
+    - apply HM₁.
+    - apply HP.
 Qed.
 
 Lemma jint_wh_std {S : VSig} (J₁ J J₂ : jump S) :
@@ -1011,12 +1016,12 @@ Proof.
     - apply H.
   + apply jint_std.
     apply Hjint.
-  + apply IHHwh1 in Hjint.
-    destruct Hjint.
-    apply IHHwh2 in H0.
+  + apply IHHwh1 in Hjint as Hstd.
+    inversion Hstd as [ ? P ? HJ₁ HP ]; subst.
+    apply IHHwh2 in HP.
     eapply jwh_std_std.
-    - apply H.
-    - apply H0.
+    - apply HJ₁.
+    - apply HP.
 Qed.
 
 (* -------------------------------------------------------------------------- *)
@@ -1048,22 +1053,22 @@ Proof.
 {
   intros Htint₁ Htint₂.
   induction Htint₂.
-  + inversion Htint₁; subst.
+  + inversion Htint₁ as [ V₀ ? HV₀ | |]; subst.
     constructor.
     eapply vint_trans.
-    - apply H2.
+    - apply HV₀.
     - apply H.
-  + inversion Htint₁; subst.
+  + inversion Htint₁ as [| M₀ ? N₀ ? HM₀ HN₀ |]; subst.
     constructor.
     - apply IHHtint₂.
-      apply H3.
+      apply HM₀.
     - eapply tstd_trans.
-      * apply H4.
+      * apply HN₀.
       * apply H.
-  + inversion Htint₁; subst.
+  + inversion Htint₁ as [| | J₀ ? HJ₀ ]; subst.
     constructor.
     eapply jstd_trans.
-    - apply H2.
+    - apply HJ₀.
     - apply H.
 }
 (* vint_trans *)
@@ -1072,49 +1077,49 @@ Proof.
   induction Hvint₂.
   + inversion Hvint₁; subst.
     apply vint_refl.
-  + inversion Hvint₁; subst.
+  + inversion Hvint₁ as [| M₀ ? HM₀ ]; subst.
     constructor.
     eapply tstd_trans.
-    - apply H2.
+    - apply HM₀.
     - apply H.
 }
 (* jint_trans *)
 {
   intros Hjint₁ Hjint₂.
   induction Hjint₂.
-  + inversion Hjint₁; subst.
+  + inversion Hjint₁ as [ q₀ M₀ ? HM₀ ]; subst.
     constructor.
     eapply tstd_trans.
-    - apply H2.
+    - apply HM₀.
     - apply H.
 }
 (* tstd_trans *)
 {
   intros Hstd₁ Hstd₂.
-  destruct Hstd₁, Hstd₂.
-  pose proof (tint_wh_std _ _ _ H0 H1) as H3.
-  inversion H3; subst.
+  destruct Hstd₁ as [ M₁ P₁ M HM₁ HP₁ ], Hstd₂ as [ M P₂ M₂ HM HP₂ ].
+  pose proof (tint_wh_std _ _ _ HP₁ HM) as HstdP₁.
+  inversion HstdP₁ as [? P ? HwhP₁ HP ]; subst.
   econstructor.
   + econstructor 3.
-    - apply H.
-    - apply H4.
+    - apply HM₁.
+    - apply HwhP₁.
   + eapply tint_trans.
-    - apply H5.
-    - apply H2.
+    - apply HP.
+    - apply HP₂.
 }
 (* jstd_trans *)
 {
   intros Hstd₁ Hstd₂.
-  destruct Hstd₁, Hstd₂.
-  pose proof (jint_wh_std _ _ _ H0 H1) as H3.
-  destruct H3.
+  destruct Hstd₁ as [ J₁ P₁ J HJ₁ HP₁ ], Hstd₂ as [ J P₂ J₂ HJ HP₂ ].
+  pose proof (jint_wh_std _ _ _ HP₁ HJ) as HstdP₁.
+  inversion HstdP₁ as [ ? P ? HwhP₁ HP ]; subst.
   econstructor.
   + econstructor 3.
-    - apply H.
-    - apply H3.
+    - apply HJ₁.
+    - apply HwhP₁.
   + eapply jint_trans.
-    - apply H4.
-    - apply H2.
+    - apply HP.
+    - apply HP₂.
 }
 Qed.
 
