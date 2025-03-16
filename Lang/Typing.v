@@ -292,8 +292,8 @@ Proof.
 (* jtyping_fmap2 *)
 {
   intros Hφ Hfmap.
-  destruct J.
-  destruct k.
+  destruct J as [q M].
+  destruct q.
   + inversion Hfmap; subst.
     econstructor.
     - eapply ktyping_fmap2 with (q := k_var k).

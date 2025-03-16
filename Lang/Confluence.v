@@ -1157,7 +1157,7 @@ Lemma tpar_eplug_invert {S : VSig} (E : ectx S) J M :
 Proof.
   intro Hpar.
   generalize dependent M.
-  induction E; intros M Hpar.
+  induction E; intros M' Hpar.
   + term_simpl in Hpar.
     inversion Hpar; subst.
     left.

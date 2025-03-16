@@ -162,14 +162,14 @@ Proof.
 (* vint_refl *)
 {
   intro V.
-  induction V as [ x | M ].
+  induction V.
   + constructor.
   + constructor. apply tint_std. apply tint_refl.
 }
 (* jint_refl *)
 {
   intro J.
-  induction J as [q M].
+  induction J.
   constructor.
   apply tint_std. apply tint_refl.
 }
@@ -226,11 +226,11 @@ Lemma tstd_app_L_cong {S : VSig} (M M' N : term S) :
   t_app M N ↠ₛₜ t_app M' N.
 Proof.
   intro Hstd.
-  destruct Hstd.
+  destruct Hstd as [M P M' HMwhP HPintM'].
   econstructor.
-  + apply twh_app_L_cong. apply H.
+  + apply twh_app_L_cong. apply HMwhP.
   + constructor.
-    - apply H0.
+    - apply HPintM'.
     - apply tstd_refl.
 Qed.
 
@@ -252,11 +252,11 @@ Lemma tstd_app {S : VSig} (M₁ M₂ N₁ N₂ : term S) :
   t_app M₁ N₁ ↠ₛₜ t_app M₂ N₂.
 Proof.
   intros Hstd₁ Hstd₂.
-  inversion Hstd₁; subst.
+  inversion Hstd₁ as [? P ? HM₁whP HPintM₂]; subst.
   econstructor.
-  - apply twh_app_L_cong. apply H.
+  - apply twh_app_L_cong. apply HM₁whP.
   - constructor.
-    * apply H0.
+    * apply HPintM₂.
     * apply Hstd₂.
 Qed.
 
@@ -276,11 +276,11 @@ Lemma jstd_jmp_cong {S : VSig} q (M M' : term S) :
   j_jmp q M ↠ₛⱼ j_jmp q M'.
 Proof.
   intro Hstd.
-  destruct Hstd.
+  destruct Hstd as [M P M' HMwhP HPintM'].
   econstructor.
-  + apply jwh_jmp_cong. apply H.
+  + apply jwh_jmp_cong. apply HMwhP.
   + constructor.
-    apply tint_std. apply H0.
+    apply tint_std. apply HPintM'.
 Qed.
 
 Lemma tred_std {S : VSig} : ∀ (M N : term S),
@@ -335,7 +335,7 @@ Qed.
 Lemma twh_ctrl_plug {S : VSig} (J : jump (incK S)) E :
   eplug E (t_ctrl J) ↠ₕₜ t_ctrl (struct_subst J (shift E)).
 Proof.
-  induction E as [| E IHE M | V E IHE ].
+  induction E.
   + term_simpl. rewrite struct_subst_pure. apply twh_refl.
   + term_simpl. econstructor 3.
     { apply twh_app_L_cong.
@@ -377,7 +377,7 @@ Proof.
 {
   intros φ J J' Hwh.
   induction Hwh.
-  + term_simpl. destruct q as [k |].
+  + term_simpl. destruct q.
     - econstructor 3.
       * apply jwh_jmp_cong.
         apply twh_ctrl_plug with (E := e_hole) (J := bind (φ ↑) J).
@@ -387,7 +387,7 @@ Proof.
            rewrite ecomp_pure.
            apply jwh_refl.
     - constructor. constructor.
-  + term_simpl. destruct q as [k |].
+  + term_simpl. destruct q.
     - apply jwh_jmp_cong.
       apply twh_map'. apply H.
     - apply jwh_jmp_cong.
@@ -400,7 +400,7 @@ Lemma twh_map {S T : VSig} : ∀ (φ : prod_arr S T) M M',
   fmap φ M ↠ₕₜ fmap φ M'.
 Proof.
   intros φ M M' Hwh.
-  induction Hwh.
+  induction Hwh as [ M₁ M₂ | M | M₁ M' M₂ ].
   + apply twh_map'. apply H.
   + apply twh_refl.
   + econstructor 3.
@@ -413,7 +413,7 @@ Lemma jwh_map {S T : VSig} : ∀ (φ : prod_arr S T) J J',
   fmap φ J ↠ₕⱼ fmap φ J'.
 Proof.
   intros φ J J' Hwh.
-  induction Hwh.
+  induction Hwh as [ J₁ J₂ | J | J₁ J' J₂ ].
   + apply jwh_map'. apply H.
   + apply jwh_refl.
   + econstructor 3.
@@ -463,7 +463,7 @@ Proof.
   intros Hjint.
   induction Hjint.
   + term_simpl.
-    destruct q as [k |].
+    destruct q.
     - constructor.
       apply tstd_map. apply H.
     - constructor.
@@ -528,8 +528,8 @@ Proof.
 {
   intros φ J J' Hwh.
   induction Hwh.
-  + term_simpl. destruct q as [k |].
-    - destruct (sub_k φ k) as [q E].
+  + term_simpl. destruct q.
+    - destruct (sub_k φ k).
       econstructor 3.
       * apply jwh_jmp_cong.
         apply twh_ctrl_plug with (E := E) (J := bind (φ ↑) J).
@@ -539,8 +539,8 @@ Proof.
            rewrite ecomp_pure. simpl ecomp.
            apply jwh_refl.
     - constructor. constructor.
-  + term_simpl. destruct q as [k |].
-    - destruct (sub_k φ k) as [q E].
+  + term_simpl. destruct q.
+    - destruct (sub_k φ k).
       apply jwh_jmp_cong. apply twh_plug.
       apply twh_bind'. apply H.
     - apply jwh_jmp_cong.
@@ -640,7 +640,7 @@ Lemma ssstd_refl {S : VSig} (s : ssub S) :
   s ↠ₛₛₛ s.
 Proof.
   unfold ssstd.
-  destruct s as [q E].
+  destruct s.
   split.
   + reflexivity.
   + apply estd_refl.
@@ -680,7 +680,7 @@ Lemma sstd_vlift {S T : VSig} (φ φ' : S {→} T) :
 Proof.
   intro Hsstd.
   constructor.
-  + intro x. destruct x.
+  + intro x. destruct x as [| x].
     - term_simpl. apply vint_refl.
     - term_simpl. apply vint_map. apply Hsstd.
   + intro k. apply ssstd_map. apply Hsstd.
@@ -694,7 +694,7 @@ Proof.
   constructor.
   + intro x. term_simpl.
     apply vint_map. apply Hsstd.
-  + intro k. destruct k.
+  + intro k. destruct k as [| k].
     - term_simpl. split.
       * reflexivity.
       * apply estd_hole.
@@ -712,18 +712,18 @@ Proof.
   intros E E' M M' Hestd Hstd.
   induction Hestd.
   + term_simpl. apply Hstd.
-  + term_simpl. destruct IHHestd.
+  + term_simpl. inversion IHHestd as [? P ? HMwhP HPintM']; subst.
     econstructor.
-    - apply twh_app_L_cong. apply H0.
+    - apply twh_app_L_cong. apply HMwhP.
     - constructor.
-      * apply H1.
+      * apply HPintM'.
       * apply H.
-  + term_simpl. destruct IHHestd.
+  + term_simpl. inversion IHHestd as [? P ? HMwhP HPintM']; subst.
     econstructor.
-    - apply twh_app_R_cong. apply H0.
+    - apply twh_app_R_cong. apply HMwhP.
     - constructor.
       * constructor. apply H.
-      * apply tint_std. apply H1.
+      * apply tint_std. apply HPintM'.
 Qed.
 
 Lemma tint_bind {S T : VSig} : ∀ (φ φ' : S {→} T) M M',
@@ -774,7 +774,7 @@ Proof.
   intros φ φ' J J' Hsstd Hjint.
   induction Hjint.
   + term_simpl.
-    destruct q as [k |].
+    destruct q.
     - pose proof Hsstd as [_ Hsstdₖ].
       specialize Hsstdₖ with k.
       unfold ssstd in Hsstdₖ.
@@ -793,18 +793,18 @@ Proof.
 (* tstd_bind *)
 {
   intros φ φ' M M' Hsstd Hstd.
-  induction Hstd.
-  + econstructor.
-    - apply twh_bind. apply H.
-    - apply tint_bind; assumption.
+  inversion Hstd as [? P ? HMwhP HPintM']; subst.
+  econstructor.
+  + apply twh_bind. apply HMwhP.
+  + apply tint_bind; assumption.
 }
 (* jstd_bind *)
 {
   intros φ φ' J J' Hsstd Hstd.
-  induction Hstd.
-  + econstructor.
-    - apply jwh_bind. apply H.
-    - apply jint_bind; assumption.
+  inversion Hstd as [? P ? HJwhP HPintJ']; subst.
+  econstructor.
+  + apply jwh_bind. apply HJwhP.
+  + apply jint_bind; assumption.
 }
 Qed.
 
@@ -815,7 +815,7 @@ Proof.
   intro Hestd.
   constructor.
   + intro x. term_simpl. apply vint_refl.
-  + intro k. destruct k.
+  + intro k. destruct k as [| k ].
     - term_simpl. split; [ reflexivity |].
       apply Hestd.
     - term_simpl. split; [ reflexivity | apply estd_refl ].
@@ -827,7 +827,7 @@ Lemma mk_subst_sstd {S : VSig} (V₁ V₂ : value S) :
 Proof.
   intros Hvint.
   constructor.
-  + intro x. destruct x.
+  + intro x. destruct x as [| x].
     - term_simpl. apply Hvint.
     - term_simpl. apply vint_refl.
   + intro k. term_simpl.
@@ -846,12 +846,12 @@ Lemma twh_std_std {S : VSig} (M₁ M M₂ : term S) :
   M₁ ↠ₛₜ M₂.
 Proof.
   intros Hwh Hstd.
-  inversion Hstd; subst.
+  inversion Hstd as [? P ? HMwhP HPintM₂]; subst.
   econstructor.
   + econstructor 3.
     - apply Hwh.
-    - apply H.
-  + apply H0.
+    - apply HMwhP.
+  + apply HPintM₂.
 Qed.
 
 Lemma jwh_std_std {S : VSig} (J₁ J J₂ : jump S) :
@@ -860,12 +860,12 @@ Lemma jwh_std_std {S : VSig} (J₁ J J₂ : jump S) :
   J₁ ↠ₛⱼ J₂.
 Proof.
   intros Hwh Hstd.
-  inversion Hstd; subst.
+  inversion Hstd as [? P ? HJwhP HPintJ₂]; subst.
   econstructor.
   + econstructor 3.
     - apply Hwh.
-    - apply H.
-  + apply H0.
+    - apply HJwhP.
+  + apply HPintJ₂.
 Qed.
 
 (* -------------------------------------------------------------------------- *)

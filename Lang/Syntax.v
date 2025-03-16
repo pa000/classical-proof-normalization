@@ -21,8 +21,8 @@ Notation "t ↑ₖ" := (lift (G := incK) t) (at level 15).
 
 (* continuation atoms *)
 Inductive katom (A : VSig) : Set :=
-  | k_var   : kv A → katom A
-  | k_tp    : katom A.
+  | k_var (k : kv A)
+  | k_tp.
 
 (* We use bidirectionality hints (&) to solve
    problems with unifying `⟨inc A, B⟩` and `incV ⟨A, B⟩`. *)
@@ -30,14 +30,14 @@ Arguments k_var   & {A}.
 Arguments k_tp    & {A}.
 
 Inductive term (A : VSig) : Set :=
-  | t_value : value A → term A
-  | t_app   : term A → term A → term A
-  | t_ctrl  : jump (incK A) → term A
+  | t_value (V : value A)
+  | t_app   (M₁ M₂ : term A)
+  | t_ctrl  (J : jump (incK A))
 with value (A : VSig) : Set :=
-  | v_var   : tv A → value A
-  | v_lam   : term (incV A) → value A
+  | v_var (x : tv A)
+  | v_lam (M : term (incV A))
 with jump (A : VSig) : Set :=
-  | j_jmp   : katom A → term A → jump A.
+  | j_jmp (q : katom A) (M : term A).
 
 Coercion t_value : value >-> term.
 
@@ -52,8 +52,8 @@ Arguments j_jmp   & {A}.
 
 Inductive ectx (A : VSig) : Set :=
   | e_hole : ectx A
-  | e_appl : ectx A → term A → ectx A
-  | e_appr : value A → ectx A → ectx A.
+  | e_appl (E : ectx A) (M : term A)
+  | e_appr (V : value A) (E : ectx A).
 
 Arguments e_hole  & {A}.
 Arguments e_appl  & {A}.
@@ -88,7 +88,7 @@ Qed.
 (* We use structural substitution with jumps.
    J[q E/k] means replace every occurence of k N with q E[N] in J. *)
 Inductive ssub (A : VSig) : Type :=
-  | s_sub : katom A → ectx A → ssub A.
+  | s_sub (q : katom A) (E : ectx A).
 
 Arguments s_sub & {A}.
 
@@ -487,7 +487,7 @@ Proof.
 
   induction J.
   + term_simpl.
-    destruct k.
+    destruct q.
     - specialize EQₖ with k.
       rewrite <- EQₖ.
       term_simpl. f_equal.
@@ -631,7 +631,7 @@ Proof.
 {
   induction V.
   + term_simpl.
-    destruct EQ as [EQ _]. specialize EQ with t.
+    destruct EQ as [EQ _]. specialize EQ with x.
     term_simpl in EQ.
     rewrite <- map_to_bind in EQ.
     apply EQ.
