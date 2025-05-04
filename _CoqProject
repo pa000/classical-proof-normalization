@@ -18,3 +18,5 @@
 ./Lang/Examples.v
 ./Lang/Confluence.v
 ./Lang/Standardisation.v
+./Lang/WeakHead.v
+./Lang/OperationalSemantics.v
