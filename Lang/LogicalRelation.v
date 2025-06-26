@@ -312,11 +312,11 @@ Definition relK {S : VSig} (A : ktype) :=
   | tp_cont A => @RelCont S ⟦ A ⟧
   end.
 
-Notation "'⟦¬' A '⟧'" := (relK A).
+Notation "'⟦' A '→⊥⊥' '⟧'" := (relK A).
 
 Definition envlog {S T : VSig} (Γ : env S) (φ : S {→} T) :=
   (∀ x, ⟦ env_v Γ x ⟧ T (sub_v φ x))
-  ∧ (∀ k, let (_, E) := sub_k φ k in ⟦¬ (env_k Γ k) ⟧ E).
+  ∧ (∀ k, let (_, E) := sub_k φ k in ⟦ (env_k Γ k) →⊥⊥ ⟧ E).
 
 Notation "'G⟦' Γ '⟧'" := (envlog Γ).
 
@@ -325,16 +325,19 @@ Definition tlog {S : VSig} (Γ : env S) (M : term S) (A : ttype) : Prop :=
 
 Notation "'T⟦' Γ '⊨' M '∷' A '⟧'" := (@tlog _ Γ M A).
 
-Definition jlog {S : VSig} (Γ : env S) (J : jump S) : Prop :=
-  let (q, M) := J in
-  ∀ A T (φ : S {→} T), G⟦ Γ ⟧ φ → EClo ⟦ A ⟧ (bind φ M).
+Definition klog {S : VSig} (Γ : env S) (q : katom S) (A : ttype) : Prop :=
+  ∀ T (φ : S {→} T), G⟦ Γ ⟧ φ → ⟦ A ⟧ (bind φ q).
 
-Notation "'J⟦' Γ '⊨' J '∷' ⊥⊥ '⟧'" := (@jlog _ Γ J).
+Notation "'K⟦' Γ '⊨' q '∷' A '→⊥⊥' '⟧'" := (@klog _ Γ q A).
 
-(* Definition klog {S : VSig} (Γ : env S) (q : katom S) (A : ttype) : Prop :=
-  ∀ T (φ : S {→} T), envlog Γ φ → RelCont ⟦ A ⟧ q. *)
+Reserved Notation "'J⟦' Γ '⊨' J '∷' ⊥⊥ '⟧'".
+Inductive jlog {S : VSig} (Γ : env S) : jump S → Prop :=
+  | jlogI : ∀ A q M,
+    (* K⟦ Γ ⊨ q ∷ A →⊥⊥ ⟧ → *)
+    T⟦ Γ ⊨ M ∷ A ⟧ →
+    J⟦ Γ ⊨ j_jmp q M ∷ ⊥⊥ ⟧
 
-(* Notation "'K⟦' Γ '⊨' q '∷' A '→⊥⊥' '⟧'" := (@klog _ Γ q A). *)
+where "'J⟦' Γ '⊨' J '∷' ⊥⊥ '⟧'" := (@jlog _ Γ J).
 
 Lemma compat_var {S : VSig} (Γ : env S) x :
   T⟦ Γ ⊨ v_var x ∷ env_v Γ x ⟧.
@@ -428,13 +431,15 @@ Lemma compat_ctrl {S : VSig} (Γ : env S) J A :
 Proof.
   intro HJ.
   intros T φ HΓ. term_simpl.
-  unfold jlog in HJ.
   intros U ψ E HE.
   term_simpl.
 
   apply twn_plug_ctrl.
 
   destruct J.
+
+  inversion HJ; subst.
+
   destruct q.
   - destruct k.
     + term_simpl. unfold struct_subst. term_simpl.
@@ -522,5 +527,5 @@ Proof.
   destruct J.
   apply twn_jwn.
   unfold jlog in Hlog.
-  
+
 }
