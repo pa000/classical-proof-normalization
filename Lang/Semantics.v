@@ -101,6 +101,19 @@ Proof.
   cong Hreds.
 Qed.
 
+Lemma tred_app_cong {S : VSig} : ∀ (M₁ M₂ N₁ N₂ : term S),
+  M₁ →*ₜ M₂ →
+  N₁ →*ₜ N₂ →
+  t_app M₁ N₁ →*ₜ t_app M₂ N₂.
+Proof.
+  intros M₁ M₂ N₁ N₂ HM HN.
+  econstructor 3.
+  { apply tred_appl_cong.
+    apply HM. }
+  apply tred_appr_cong.
+  apply HN.
+Qed.
+
 Lemma tred_ctrl_cong {S : VSig} : ∀ (J J' : jump (incK S)),
   J →*ⱼ J' →
   t_ctrl J →*ₜ t_ctrl J'.
@@ -278,3 +291,16 @@ Proof.
     term_simpl. constructor 2.
 Qed.
 
+Fixpoint treds_value_inv {S : VSig} (V : value S) N
+  (Hred: V →*ₜ N) { struct Hred } :
+  ∃ V', N = t_value V'.
+Proof.
+  inversion Hred; subst.
+  - inversion H; subst.
+    exists V'. reflexivity.
+  - exists V. reflexivity.
+  - apply treds_value_inv in H.
+    destruct H as [V']; subst.
+    apply treds_value_inv in H0.
+    apply H0.
+Qed.

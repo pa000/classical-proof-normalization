@@ -187,6 +187,44 @@ Proof.
     + apply Hred'.
 Qed.
 
+Fixpoint twn_reds {S : VSig} (M₁ M₂ : term S)
+  (Hreds: M₁ →*ₜ M₂) { struct Hreds } :
+  twn M₂ →
+  twn M₁.
+Proof.
+  intros Hwn.
+  inversion Hreds; subst.
+  - eapply twn_red.
+    + apply H.
+    + apply Hwn.
+  - apply Hwn.
+  - apply twn_reds in H0; [| apply Hwn ].
+    apply twn_reds in H; [| apply H0 ].
+    apply H.
+Qed.
+
+Lemma twn_plug {S : VSig} E (M₁ M₂ : term S) :
+  M₁ →*ₜ M₂ →
+  twn (eplug E M₂) →
+  twn (eplug E M₁).
+Proof.
+  intros Hreds Hwn.
+  eapply twn_reds.
+  - apply tred_plug_cong. apply Hreds.
+  - apply Hwn.
+Qed.
+
+Lemma twn_lam {S : VSig} (M : term (incV S)) :
+  twn M →
+  twn (v_lam M).
+Proof.
+  intro HM.
+  destruct HM as [V [Hnf Hred]].
+  exists (v_lam V). split.
+  - constructor. constructor. apply Hnf.
+  - apply tred_value_cong. apply vred_lam_cong. apply Hred.
+Qed.
+
 Lemma twn_plug_ctrl {S : VSig} E (J : jump (incK S)) :
   jwn (struct_subst J (shift E)) →
   twn (eplug E (t_ctrl J)).
@@ -201,7 +239,7 @@ Proof.
     + apply tred_ctrl_cong. apply Hjred.
 Qed.
 
-Lemma twn_jwn {S : VSig} q (M : term S) :
+(* Lemma twn_jwn {S : VSig} q (M : term S) :
   twn M →
   jwn (j_jmp q M).
 Proof.
@@ -225,43 +263,37 @@ Proof.
     + econstructor 3.
       * apply jred_jmp_cong. apply HM.
       * constructor. constructor.
-Admitted.
+Admitted. *)
 
 
 (* ========================================================================== *)
 (* Biorthogonal closure *)
 
-Definition SemType : Type := ∀ S : VSig, value S → Prop.
-
-Class SemTypeClass (R : SemType) := {
-  SemType_map {S T : VSig} (φ : prod_arr S T) (V : value S) :
-    R S V →
-    R T (fmap φ V)
-}.
+Definition SemType {S : VSig} : Type := value S → Prop.
 
 Definition KClo {S : VSig} (R : SemType) (E : ectx S) : Prop :=
-  ∀ T (φ : prod_arr S T) (V : value T), R T V → twn (eplug (fmap φ E) V).
+  ∀ V, R V → twn (eplug E V).
 
 Definition EClo {S : VSig} (R : SemType) (M : term S) : Prop :=
-  ∀ T (φ : prod_arr S T) (E : ectx T), KClo R E → twn (eplug E (fmap φ M)).
+  ((∃ V : value S, M →*ₜ V ∧ R V)
+   ∨ (∃ J, M →*ₜ t_ctrl J ∧ (∀ E, KClo R E → jwn (struct_subst J (shift E))))).
 
-Lemma EClo_value {S : VSig} (R : SemType) {STC : SemTypeClass R} (V : value S) :
-  R S V →
+Definition JClo {S : VSig} (R : @SemType S) (J : jump S) : Prop :=
+  True.
+
+Lemma EClo_value {S : VSig} (R : SemType) (V : value S) :
+  R V →
   EClo R V.
 Proof.
   intro HR.
-  intros T φ E HE.
-  unfold KClo in HE.
-  rewrite <- map_id with (f := ı).
-  rewrite eplug_fmap.
-  apply HE.
-  - term_simpl. rewrite map_id.
-    + apply SemType_map. apply HR.
-    + reflexivity.
-  - reflexivity.
+  unfold EClo.
+  left. exists V.
+  split.
+  - constructor 2.
+  - apply HR.
 Qed.
 
-Lemma KClo_map {S T : VSig} (R : SemType) (φ : prod_arr S T) (E : ectx S) :
+(* Lemma KClo_map {S T : VSig} (R : SemType) (φ : prod_arr S T) (E : ectx S) :
   KClo R E →
   KClo R (fmap φ E).
 Proof.
@@ -269,40 +301,65 @@ Proof.
   rewrite map_map_comp'.
   apply HE.
   apply HV.
-Qed.
+Qed. *)
 
 (* ========================================================================== *)
 (* Denotation of types *)
 
 Reserved Notation "'⟦' A '⟧'".
 
-Definition RelAtom : SemType :=
-  λ S V, twn V.
+Definition RelAtom {S : VSig} : SemType :=
+  λ V : value S, twn V.
 
-Program Instance SemTypeClass_Atom : SemTypeClass RelAtom.
-Next Obligation.
-  unfold RelAtom.
-Admitted.
+Definition RelBot {S : VSig} : SemType :=
+  λ V : value S, False.
 
-Definition RelBot : SemType :=
-  λ S V, False.
+Definition RelArrow {S : VSig} (R₁ R₂ : SemType) : SemType :=
+  λ V : value S, twn V ∧ (∀ V', R₁ V' → EClo R₂ (t_app V V')).
 
-Program Instance SemTypeClass_Bot : SemTypeClass RelBot.
-
-Definition RelArrow (R₁ R₂ : SemType) : SemType :=
-  λ S V, (∀ V', R₁ S V' → EClo R₂ (t_app V V')).
-
-Program Instance SemTypeClass_Arrow : ∀ R₁ R₂, SemTypeClass (RelArrow R₁ R₂).
-Next Obligation.
-Admitted.
-
-Fixpoint relT (A : ttype) : SemType :=
-  λ S, match A with
-  | tp_atom _ => RelAtom S
-  | tp_bottom => RelBot S
-  | tp_arrow A B => RelArrow ⟦ A ⟧ ⟦ B ⟧ S
+Fixpoint relT {S : VSig} (A : ttype) : SemType :=
+  match A with
+  | tp_atom _ => @RelAtom S
+  | tp_bottom => RelBot
+  | tp_arrow A B => RelArrow ⟦ A ⟧ ⟦ B ⟧
   end
-where "⟦ A ⟧" := (relT A).
+where "⟦ A ⟧" := (@relT _ A).
+
+(* Lemma EClo_value {S : VSig} (A : ttype) (V : value S) :
+  ⟦ A ⟧ V →
+  EClo ⟦ A ⟧ V.
+Proof.
+  intro HV.
+  destruct A.
+  - term_simpl in *. unfold EClo, RelAtom in *.
+    repeat split.
+    + apply HV.
+    + left. destruct HV as [V' [HnfV Hred]].
+      apply treds_value_inv in Hred as HV'.
+      destruct HV' as [U]; subst; rename U into V'.
+      exists V'. split.
+      * apply Hred.
+      * exists V'. split; [ assumption | constructor 2].
+  - destruct HV.
+  - term_simpl in *. unfold EClo, RelArrow in *.
+    destruct HV as [Hwn HV].
+    repeat split.
+    + apply Hwn.
+    + left. destruct Hwn as [V' [HnfV' Hred]].
+      apply treds_value_inv in Hred as HV'ᵥ.
+      destruct HV'ᵥ as [U]; subst; rename U into V'.
+      exists V'. split; [| split ].
+      * apply Hred.
+      * exists V'. split; [ assumption | constructor 2 ].
+      * intros U HU. specialize HV with U.
+        apply HV in HU.
+        unfold EClo in *.
+        destruct HU as [HnfU HU].
+        unfold twn in HnfU.
+        split.
+        -- 
+
+ *)
 
 Definition RelCont {S : VSig} (R : SemType) :=
   @KClo S R.
@@ -314,41 +371,45 @@ Definition relK {S : VSig} (A : ktype) :=
 
 Notation "'⟦' A '→⊥⊥' '⟧'" := (relK A).
 
-Definition envlog {S T : VSig} (Γ : env S) (φ : S {→} T) :=
-  (∀ x, ⟦ env_v Γ x ⟧ T (sub_v φ x))
+Definition relG {S T : VSig} (Γ : env S) (φ : S {→} T) :=
+  (∀ x, ⟦ env_v Γ x ⟧ (sub_v φ x))
   ∧ (∀ k, let (_, E) := sub_k φ k in ⟦ (env_k Γ k) →⊥⊥ ⟧ E).
 
-Notation "'G⟦' Γ '⟧'" := (envlog Γ).
+Notation "'G⟦' Γ '⟧'" := (@relG _ _ Γ).
 
 Definition tlog {S : VSig} (Γ : env S) (M : term S) (A : ttype) : Prop :=
   ∀ T (φ : S {→} T), G⟦ Γ ⟧ φ → EClo ⟦ A ⟧ (bind φ M).
 
 Notation "'T⟦' Γ '⊨' M '∷' A '⟧'" := (@tlog _ Γ M A).
 
-Definition klog {S : VSig} (Γ : env S) (q : katom S) (A : ttype) : Prop :=
-  ∀ T (φ : S {→} T), G⟦ Γ ⟧ φ → ⟦ A ⟧ (bind φ q).
+Definition jlog {S : VSig} (Γ : env S) (J : jump S) : Prop :=
+  let (q, M) := J in
+  ∀ T (φ : S {→} T) A, G⟦ Γ ⟧ φ → K[ Γ ⊢ q ∷ A →⊥⊥ ] → JClo ⟦ A ⟧ (bind φ J).
 
-Notation "'K⟦' Γ '⊨' q '∷' A '→⊥⊥' '⟧'" := (@klog _ Γ q A).
-
-Reserved Notation "'J⟦' Γ '⊨' J '∷' ⊥⊥ '⟧'".
-Inductive jlog {S : VSig} (Γ : env S) : jump S → Prop :=
-  | jlogI : ∀ A q M,
-    (* K⟦ Γ ⊨ q ∷ A →⊥⊥ ⟧ → *)
-    T⟦ Γ ⊨ M ∷ A ⟧ →
-    J⟦ Γ ⊨ j_jmp q M ∷ ⊥⊥ ⟧
-
-where "'J⟦' Γ '⊨' J '∷' ⊥⊥ '⟧'" := (@jlog _ Γ J).
+Notation "'J⟦' Γ '⊨' J '∷' ⊥⊥ '⟧'" := (@jlog _ Γ J).
 
 Lemma compat_var {S : VSig} (Γ : env S) x :
   T⟦ Γ ⊨ v_var x ∷ env_v Γ x ⟧.
 Proof.
   intros T φ HΓ.
+  term_simpl.
   apply EClo_value.
-  - destruct (env_v Γ x); term_simpl.
-    + apply SemTypeClass_Atom.
-    + apply SemTypeClass_Bot.
-    + apply SemTypeClass_Arrow.
-  - apply HΓ.
+  apply HΓ.
+Qed.
+
+Lemma twn_EK {S : VSig} (M : term S) E R :
+  EClo R M →
+  KClo R E →
+  twn (eplug E M).
+Proof.
+  intros HE HK.
+  unfold EClo in HE. destruct HE as [[V [Hred HV]] | [J [Hred HJ]]].
+  - eapply twn_plug.
+    + apply Hred.
+    + apply HK. apply HV.
+  - eapply twn_plug.
+    + apply Hred.
+    + apply twn_plug_ctrl. apply HJ. apply HK.
 Qed.
 
 Lemma compat_app_cl {S : VSig} (M₁ M₂ : term S) (R₁ R₂ : SemType) :
@@ -357,30 +418,81 @@ Lemma compat_app_cl {S : VSig} (M₁ M₂ : term S) (R₁ R₂ : SemType) :
   EClo R₁ (t_app M₁ M₂).
 Proof.
   intros HM₁ HM₂.
-  unfold EClo. intros T φ E HE.
-  replace (t_app M₁ M₂) with (eplug (e_appl e_hole M₂) M₁) by reflexivity.
-  rewrite eplug_fmap.
-  rewrite eplug_plug_comp.
-  apply HM₁. intros U ψ V HV.
-  rewrite <- ecomp_fmap.
-  rewrite <- eplug_plug_comp. term_simpl.
-  replace (t_app V (fmap ψ (fmap φ M₂))) with (eplug (e_appr V e_hole) (fmap ψ (fmap φ M₂))) by reflexivity.
-  rewrite eplug_plug_comp.
-  rewrite map_map_comp'.
-  unfold EClo in HM₂.
-  apply HM₂. intros U' ψ' V' HV'.
-  rewrite <- ecomp_fmap.
-  rewrite <- eplug_plug_comp. term_simpl.
-  rewrite <- map_id with (f := ı); [| reflexivity ].
-  rewrite eplug_fmap.
-  apply SemType_map with (φ := ψ') in HV.
-  unfold RelArrow, EClo in HV.
-  refine (HV V' _ U' _ _ _).
-  - apply HV'.
-  - rewrite map_id; [| reflexivity ].
-    rewrite map_map_comp'.
-    apply KClo_map.
-    apply HE.
+  unfold EClo in *.
+  destruct HM₁ as [HM₁ | HM₁], HM₂ as [HM₂ | HM₂].
+  - destruct HM₁ as [V₁ [Hred₁ HV₁]].
+    destruct HM₂ as [V₂ [Hred₂ HV₂]].
+    unfold RelArrow in HV₁.
+    destruct HV₁ as [Hwn₁ HV₁].
+    specialize HV₁ with V₂. apply HV₁ in HV₂.
+    unfold EClo in HV₂.
+    destruct HV₂ as [HV₂ | HV₂].
+    + destruct HV₂ as [V [Hred HV]].
+      left. exists V. split.
+      * econstructor 3.
+        { apply tred_app_cong; [ apply Hred₁ | apply Hred₂ ]. }
+        apply Hred.
+      * apply HV.
+    + destruct HV₂ as [J [Hred HJ]].
+      right. exists J. split.
+      * econstructor 3.
+        { apply tred_app_cong; [ apply Hred₁ | apply Hred₂ ]. }
+        apply Hred.
+      * apply HJ.
+  - destruct HM₁ as [V₁ [Hred₁ HV₁]].
+    destruct HM₂ as [J₂ [Hred₂ HJ₂]].
+    right. exists (struct_subst J₂ (e_appr (shift V₁) e_hole)). split.
+    + econstructor 3.
+      { apply tred_app_cong; [ apply Hred₁ | apply Hred₂ ]. }
+      constructor. constructor.
+    + intros E HE.
+      rewrite struct_subst_comp with (E₁ := e_appr V₁ e_hole).
+      remember (ecomp E (e_appr V₁ e_hole)) as E'.
+      specialize HJ₂ with E'.
+      apply HJ₂.
+      unfold KClo. intros V₂ HV₂. subst E'.
+      rewrite <- eplug_plug_comp; simpl.
+      unfold RelArrow in HV₁. destruct HV₁ as [Hwn₁ HV₁].
+      specialize HV₁ with V₂. apply HV₁ in HV₂.
+      eapply twn_EK.
+      * apply HV₂.
+      * apply HE.
+  - destruct HM₁ as [J₁ [Hred₁ HJ₁]].
+    destruct HM₂ as [V₂ [Hred₂ HV₂]].
+    right. exists (struct_subst J₁ (shift (e_appl e_hole V₂))). split.
+    + econstructor 3.
+      { apply tred_app_cong; [ apply Hred₁ | apply Hred₂ ]. }
+      constructor. constructor.
+    + intros E HE.
+      rewrite struct_subst_comp. apply HJ₁. unfold KClo.
+      intros V HV.
+      rewrite <- eplug_plug_comp; simpl.
+      unfold RelArrow in HV. destruct HV as [Hwn HV].
+      specialize HV with V₂. apply HV in HV₂.
+      eapply twn_EK.
+      * apply HV₂.
+      * apply HE.
+  - destruct HM₁ as [J₁ [Hred₁ HJ₁]].
+    destruct HM₂ as [J₂ [Hred₂ HJ₂]].
+    right. exists (struct_subst J₁ (shift (e_appl e_hole (t_ctrl J₂)))). split.
+    + econstructor 3.
+      { apply tred_app_cong; [ apply Hred₁ | apply Hred₂ ]. }
+      constructor. constructor.
+    + intros E HE.
+      rewrite struct_subst_comp. apply HJ₁.
+      unfold KClo. intros V HV.
+      rewrite <- eplug_plug_comp; simpl.
+      eapply twn_plug.
+      { constructor. constructor. }
+      apply twn_plug_ctrl.
+      rewrite struct_subst_comp with (E₁ := e_appr V e_hole).
+      apply HJ₂. intros V' HV'.
+      rewrite <- eplug_plug_comp; simpl.
+      unfold RelArrow in HV. destruct HV as [Hwn HV].
+      apply HV in HV'.
+      eapply twn_EK.
+      * apply HV'.
+      * apply HE.
 Qed.
 
 Lemma compat_app {S : VSig} (Γ : env S) M₁ M₂ τ₁ τ₂ :
@@ -400,8 +512,19 @@ Lemma compat_lam {S : VSig} (Γ : env S) M τ₁ τ₂ :
 Proof.
   intro HM.
   intros T φ HΓ. term_simpl.
-  apply EClo_value; [ apply SemTypeClass_Arrow |].
-  unfold RelArrow.
+  apply EClo_value.
+  unfold tlog in HM.
+  (* specialize HM with (incV T) (@lift _ _ _ LiftableCore_sub_incV _ _ φ). *)
+  (* assert (Hlift: G⟦ Γ ↦ᵥ τ₂ ⟧ (φ ↑ᵥ)).
+  { unfold relG. split.
+    - intro x. destruct x as [| x ].
+      + simpl. 
+      + simpl. unfold relG in HΓ. apply HΓ.
+    - intro k. simpl. apply HΓ. } *)
+  unfold RelArrow. split.
+  - apply twn_lam. admit.
+  - intros V' HV'. left.
+    unfold EClo in HM.
   intros V' HV'.
   intros U ψ E HE.
   eapply twn_red.
